@@ -6,32 +6,37 @@ let produto = null;
 bloquearAtributos(true);
 
 async function inicializar() {
-    await carregarUnidadesMedida();
+    await carregarCategoriasRoupa();
     await listar();
 }
 
-async function carregarUnidadesMedida() {
-    const select = document.getElementById("selectId_unidade_medida");
+async function carregarCategoriasRoupa() {
+    const select = document.getElementById("selectId_categoria_roupa");
+
     try {
-        const resposta = await fetch(`${URL_API}/unidade_medida/listar`);
+        const resposta = await fetch(`${URL_API}/categoria_roupa/listar`);
         const data = await resposta.json();
+
         if (data.sucesso) {
-            select.innerHTML = '<option value="">-- Selecione uma Unidade --</option>';
-            data.unidades.forEach(um => {
-                select.innerHTML += `<option value="${um.id_unidade_medida}">${um.id_unidade_medida} - ${um.nome_unidade_medida}</option>`;
+            select.innerHTML = '<option value="">-- Selecione uma Categoria --</option>';
+
+            data.categorias.forEach(categoria => {
+                select.innerHTML += `<option value="${categoria.id_categoria_roupa}">${categoria.id_categoria_roupa} - ${categoria.nome_categoria_roupa}</option>`;
             });
         }
     } catch (erro) {
-        select.innerHTML = '<option value="">Erro ao carregar unidades</option>';
+        select.innerHTML = '<option value="">Erro ao carregar categorias</option>';
     }
 }
 
 function carregarImagem(id) {
     const img = document.getElementById('imgProduto');
+
     if (!id) {
         img.src = SILHUETA_URL;
         return;
     }
+
     img.src = `${URL_API}/imagens/${id}.png?t=${new Date().getTime()}`;
     img.onerror = () => { img.src = SILHUETA_URL; };
 }
@@ -82,6 +87,7 @@ async function procurePorChavePrimaria(chave) {
 
 async function procure() {
     const id_produto = document.getElementById("inputId_produto").value;
+
     if (isNaN(id_produto) || !Number.isInteger(Number(id_produto)) || id_produto === "") {
         mostrarAviso("Precisa ser um número inteiro");
         return;
@@ -89,7 +95,7 @@ async function procure() {
 
     produto = await procurePorChavePrimaria(id_produto);
     oQueEstaFazendo = '';
-    
+
     if (produto) {
         mostrarDadosProduto(produto);
         carregarImagem(id_produto);
@@ -107,14 +113,14 @@ function inserir() {
     bloquearAtributos(false);
     visibilidadeDosBotoes('none', 'none', 'none', 'none', 'inline');
     oQueEstaFazendo = 'inserindo';
-    mostrarAviso("INSERINDO - Digite os atributos, escolha a imagem e clique em salvar");
+    mostrarAviso("INSERINDO - Digite os dados, escolha a imagem e clique em salvar");
 }
 
 function alterar() {
     bloquearAtributos(false);
     visibilidadeDosBotoes('none', 'none', 'none', 'none', 'inline');
     oQueEstaFazendo = 'alterando';
-    mostrarAviso("ALTERANDO - Digite os atributos, mude a imagem (opcional) e clique em salvar");
+    mostrarAviso("ALTERANDO - Digite os dados, mude a imagem (opcional) e clique em salvar");
 }
 
 function excluir() {
@@ -125,25 +131,103 @@ function excluir() {
 }
 
 async function salvar() {
-    let id_produto = document.getElementById("inputId_produto").value;
-    const nome_produto = document.getElementById("inputNome_produto").value;
-    const id_unidade_medida = document.getElementById("selectId_unidade_medida").value || null;
-    const quantidade_estoque_produto = parseInt(document.getElementById("inputQuantidade_estoque_produto").value) || 0;
-    const preco_unitario_produto = parseFloat(document.getElementById("inputPreco_unitario_produto").value) || 0.0;
+    const id_produto = document.getElementById("inputId_produto").value;
+    const nome_produto = document.getElementById("inputNome_produto").value.trim();
+    const id_categoria_roupa = document.getElementById("selectId_categoria_roupa").value;
+    const tamanho = document.getElementById("inputTamanho").value.trim();
+    const cor = document.getElementById("inputCor").value.trim();
+    const textoEstoque = document.getElementById("inputQuantidade_estoque_produto").value;
+    const textoPreco = document.getElementById("inputPreco_unitario_produto").value;
 
-    const dadosProduto = { id_produto, nome_produto, id_unidade_medida, quantidade_estoque_produto, preco_unitario_produto };
+    // Só confere os campos quando for inserir ou alterar (na exclusão não precisa)
+    if (oQueEstaFazendo === 'inserindo' || oQueEstaFazendo === 'alterando') {
+
+        if (id_produto === "" || !Number.isInteger(Number(id_produto))) {
+            mostrarAviso("O ID do produto precisa ser um número inteiro.");
+            return;
+        }
+        if (nome_produto === "") {
+            mostrarAviso("Digite o nome da roupa.");
+            return;
+        }
+        if (nome_produto.length > 45) {
+            mostrarAviso("O nome da roupa pode ter no máximo 45 letras.");
+            return;
+        }
+        if (id_categoria_roupa === "") {
+            mostrarAviso("Escolha uma categoria.");
+            return;
+        }
+        if (tamanho === "") {
+            mostrarAviso("Digite o tamanho.");
+            return;
+        }
+        if (tamanho.length > 10) {
+            mostrarAviso("O tamanho pode ter no máximo 10 letras.");
+            return;
+        }
+        if (cor === "") {
+            mostrarAviso("Digite a cor.");
+            return;
+        }
+        if (cor.length > 30) {
+            mostrarAviso("A cor pode ter no máximo 30 letras.");
+            return;
+        }
+        if (textoEstoque === "" || !Number.isInteger(Number(textoEstoque)) || Number(textoEstoque) < 0) {
+            mostrarAviso("A quantidade em estoque precisa ser um número inteiro (0 ou mais).");
+            return;
+        }
+        if (textoPreco === "" || isNaN(Number(textoPreco)) || Number(textoPreco) <= 0) {
+            mostrarAviso("O preço precisa ser um número maior que zero.");
+            return;
+        }
+    }
+
+    const quantidade_estoque_produto = parseInt(textoEstoque) || 0;
+    const preco_unitario_produto = parseFloat(textoPreco) || 0.0;
+
+    const dadosProduto = {
+        id_produto,
+        nome_produto,
+        id_categoria_roupa: id_categoria_roupa || null,
+        tamanho,
+        cor,
+        quantidade_estoque_produto,
+        preco_unitario_produto
+    };
 
     try {
         if (oQueEstaFazendo === 'inserindo') {
-            await fetch(`${URL_API}/produto`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dadosProduto) });
+            const resposta = await fetch(`${URL_API}/produto`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dadosProduto)
+            });
+            const data = await resposta.json();
+            if (!data.sucesso) return mostrarAviso(data.mensagem);
+
             await uploadImagemParaServidor(id_produto);
             mostrarAviso("Inserido no Banco de Dados com sucesso!");
+
         } else if (oQueEstaFazendo === 'alterando') {
-            await fetch(`${URL_API}/produto/${id_produto}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dadosProduto) });
+            const resposta = await fetch(`${URL_API}/produto/${id_produto}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dadosProduto)
+            });
+            const data = await resposta.json();
+            if (!data.sucesso) return mostrarAviso(data.mensagem);
+
             await uploadImagemParaServidor(id_produto);
             mostrarAviso("Alterado no Banco de Dados com sucesso!");
+
         } else if (oQueEstaFazendo === 'excluindo') {
-            await fetch(`${URL_API}/produto/${id_produto}`, { method: 'DELETE' });
+            const resposta = await fetch(`${URL_API}/produto/${id_produto}`, { method: 'DELETE' });
+            const data = await resposta.json();
+
+            if (!data.sucesso) return mostrarAviso(data.mensagem);
+
             carregarImagem(null);
             mostrarAviso("Excluído do Banco de Dados!");
         }
@@ -152,6 +236,7 @@ async function salvar() {
         limparAtributos();
         document.getElementById("inputId_produto").value = "";
         listar();
+
     } catch (erro) {
         mostrarAviso("Erro ao efetuar operação no servidor.");
     }
@@ -161,13 +246,17 @@ async function listar() {
     try {
         const resposta = await fetch(`${URL_API}/produto/listar`);
         const data = await resposta.json();
+
         if (data.sucesso) {
             let texto = "";
+
             for (let linha of data.produtos) {
-                const um = linha.id_unidade_medida ? ` [${linha.id_unidade_medida}]` : '';
-                texto += `${linha.id_produto} - ${linha.nome_produto}${um} - Estoque: ${linha.quantidade_estoque_produto} - Preço: R$ ${parseFloat(linha.preco_unitario_produto).toFixed(2)}<br>`;
+                const categoria = linha.id_categoria_roupa ? ` [${linha.id_categoria_roupa}]` : '';
+                texto += `${linha.id_produto} - ${linha.nome_produto}${categoria} - Tamanho: ${linha.tamanho || '-'} - Cor: ${linha.cor || '-'} - Estoque: ${linha.quantidade_estoque_produto} - Preço: R$ ${parseFloat(linha.preco_unitario_produto).toFixed(2)}<br>`;
             }
-            document.getElementById("outputSaida").innerHTML = texto || "Nenhum produto cadastrado.";
+
+            document.getElementById("outputSaida").innerHTML =
+                texto || "Nenhuma roupa cadastrada.";
         }
     } catch (erro) {
         document.getElementById("outputSaida").innerHTML = "Servidor offline.";
@@ -189,7 +278,9 @@ function mostrarAviso(mensagem) {
 function mostrarDadosProduto(p) {
     document.getElementById("inputId_produto").value = p.id_produto;
     document.getElementById("inputNome_produto").value = p.nome_produto;
-    document.getElementById("selectId_unidade_medida").value = p.id_unidade_medida || "";
+    document.getElementById("selectId_categoria_roupa").value = p.id_categoria_roupa || "";
+    document.getElementById("inputTamanho").value = p.tamanho || "";
+    document.getElementById("inputCor").value = p.cor || "";
     document.getElementById("inputQuantidade_estoque_produto").value = p.quantidade_estoque_produto;
     document.getElementById("inputPreco_unitario_produto").value = p.preco_unitario_produto;
     bloquearAtributos(true);
@@ -199,7 +290,9 @@ function limparAtributos() {
     produto = null;
     oQueEstaFazendo = '';
     document.getElementById("inputNome_produto").value = "";
-    document.getElementById("selectId_unidade_medida").value = "";
+    document.getElementById("selectId_categoria_roupa").value = "";
+    document.getElementById("inputTamanho").value = "";
+    document.getElementById("inputCor").value = "";
     document.getElementById("inputQuantidade_estoque_produto").value = "";
     document.getElementById("inputPreco_unitario_produto").value = "";
     document.getElementById("inputImagem").value = "";
@@ -209,7 +302,9 @@ function limparAtributos() {
 function bloquearAtributos(soLeitura) {
     document.getElementById("inputId_produto").readOnly = !soLeitura;
     document.getElementById("inputNome_produto").readOnly = soLeitura;
-    document.getElementById("selectId_unidade_medida").disabled = soLeitura;
+    document.getElementById("selectId_categoria_roupa").disabled = soLeitura;
+    document.getElementById("inputTamanho").readOnly = soLeitura;
+    document.getElementById("inputCor").readOnly = soLeitura;
     document.getElementById("inputQuantidade_estoque_produto").readOnly = soLeitura;
     document.getElementById("inputPreco_unitario_produto").readOnly = soLeitura;
 }

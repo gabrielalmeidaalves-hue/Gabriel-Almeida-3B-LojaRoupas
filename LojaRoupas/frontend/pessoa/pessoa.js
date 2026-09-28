@@ -230,7 +230,66 @@ async function excluirPessoa() {
     operacao = 'excluir';
 }
 
+// Confere os campos e devolve a mensagem do primeiro erro (ou texto vazio se estiver tudo certo)
+function validarPessoa() {
+    const cpf = searchId.value.trim();
+    const nome = document.getElementById('nome_pessoa').value.trim();
+    const dataNascimento = document.getElementById('data_nascimento').value;
+    const endereco = document.getElementById('endereco_pessoa').value.trim();
+    const senha = document.getElementById('senha_pessoa').value;
+    const email = document.getElementById('email_pessoa').value.trim();
+
+    if (cpf === '') return 'Digite o CPF (ID) da pessoa.';
+    if (!/^[0-9]+$/.test(cpf)) return 'O CPF (ID) deve ter só números.';
+    if (cpf.length > 20) return 'O CPF (ID) pode ter no máximo 20 números.';
+
+    if (nome === '') return 'Digite o nome.';
+    if (nome.length > 60) return 'O nome pode ter no máximo 60 letras.';
+
+    if (dataNascimento === '') return 'Escolha a data de nascimento.';
+    if (dataNascimento > new Date().toISOString().slice(0, 10)) return 'A data de nascimento não pode ser no futuro.';
+
+    if (endereco === '') return 'Digite o endereço.';
+    if (endereco.length > 150) return 'O endereço pode ter no máximo 150 letras.';
+
+    if (senha === '') return 'Digite a senha.';
+    if (senha.length > 50) return 'A senha pode ter no máximo 50 letras.';
+
+    if (email === '') return 'Digite o email.';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'O email digitado não é válido.';
+    if (email.length > 75) return 'O email pode ter no máximo 75 letras.';
+
+    if (document.getElementById('checkboxFuncionario').checked) {
+        const cargo = document.getElementById('cargo_id_cargo').value;
+        const salario = document.getElementById('salario_funcionario').value;
+        const comissao = document.getElementById('porcentagem_comissao_funcionario').value;
+
+        if (cargo === '') return 'Funcionário: escolha um cargo.';
+        if (salario === '' || isNaN(Number(salario)) || Number(salario) < 0) return 'Funcionário: o salário precisa ser um número (0 ou mais).';
+        if (comissao === '' || isNaN(Number(comissao)) || Number(comissao) < 0 || Number(comissao) > 100) return 'Funcionário: a comissão precisa ser um número de 0 a 100.';
+    }
+
+    if (document.getElementById('checkboxCliente').checked) {
+        const renda = document.getElementById('renda_cliente').value;
+        const dataCadastro = document.getElementById('data_cadastro_cliente').value;
+
+        if (renda === '' || isNaN(Number(renda)) || Number(renda) < 0) return 'Cliente: a renda precisa ser um número (0 ou mais).';
+        if (dataCadastro === '') return 'Cliente: escolha a data de cadastro.';
+    }
+
+    return '';
+}
+
 async function salvarOperacao() {
+    // Só confere os campos quando for incluir ou alterar (na exclusão não precisa)
+    if (operacao === 'incluir' || operacao === 'alterar') {
+        const erro = validarPessoa();
+        if (erro !== '') {
+            mostrarMensagem(erro, 'error');
+            return;
+        }
+    }
+
     const formData = new FormData(form);
     const pessoa = {
         cpf_pessoa: searchId.value.trim(),

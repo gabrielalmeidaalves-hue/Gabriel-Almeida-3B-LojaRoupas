@@ -1,0 +1,68 @@
+.
+├── backend
+│   ├── controllers
+│   │   ├── cargoController.js
+│   │   ├── clienteController.js
+│   │   ├── funcionarioController.js
+│   │   ├── pessoaController.js
+│   │   ├── produtoController.js
+│   │   └── categoriaRoupaController.js
+│   ├── database.js
+│   ├── routes
+│   │   ├── cargoRoutes.js
+│   │   ├── clienteRoutes.js
+│   │   ├── funcionarioRoutes.js
+│   │   ├── pessoaRoutes.js
+│   │   ├── produtoRoutes.js
+│   │   └── categoriaRoupaRoutes.js
+│   └── server.js
+├── criarEstrutura.sh
+├── documentacao
+│   ├── styleshop.sql
+│   ├── instrucoes_para_novos_cruds.md
+│   ├── postgres - styleshop - public.png
+│   └── prompt_continuar.md
+├── estrutura.txt
+├── frontend
+│   ├── cargo
+│   │   ├── cargo.css
+│   │   ├── cargo.html
+│   │   └── cargo.js
+│   ├── menu
+│   │   ├── menu.css
+│   │   ├── menu.html
+│   │   └── menu.js
+│   ├── pessoa
+│   │   ├── pessoa.css
+│   │   ├── pessoa.html
+│   │   └── pessoa.js
+│   ├── produto
+│   │   ├── produto.css
+│   │   ├── produto.html
+│   │   └── produto.js
+│   └── categoria_roupa
+│       ├── categoria_roupa.css
+│       ├── categoria_roupa.html
+│       └── categoria_roupa.js
+├── imagens
+│   ├── 10.png
+│   ├── 11.png
+│   ├── 1.png
+│   ├── 22.png
+│   ├── 2.png
+│   ├── 3.png
+│   ├── 4.png
+│   ├── 50.png
+│   ├── 51.png
+│   ├── 5.png
+│   ├── 6.png
+│   ├── 7.png
+│   ├── 8.png
+│   ├── 9.png
+│   └── silhueta.png
+├── index.html
+├── package.json
+├── package-lock.json
+└── README.md
+
+11 directories, 54 files

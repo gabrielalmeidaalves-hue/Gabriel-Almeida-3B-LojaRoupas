@@ -1,32 +1,32 @@
 const URL_API = 'http://localhost:3001';
 
 let oQueEstaFazendo = '';
-let unidadeMedida = null;
+let categoriaRoupa = null;
 bloquearAtributos(true);
 
 async function procurePorChavePrimaria(chave) {
     try {
-        const resposta = await fetch(`${URL_API}/unidade_medida/${chave}`);
+        const resposta = await fetch(`${URL_API}/categoria_roupa/${chave}`);
         const data = await resposta.json();
-        return data.sucesso ? data.unidade : null;
+        return data.sucesso ? data.categoria : null;
     } catch (erro) {
         return null;
     }
 }
 
 async function procure() {
-    const id_unidade_medida = document.getElementById("inputId_unidade_medida").value.trim().toUpperCase();
-    if (!id_unidade_medida || id_unidade_medida.length > 2) {
-        mostrarAviso("O ID/Sigla deve conter de 1 a 2 caracteres (ex: KG, UN).");
+    const id_categoria_roupa = document.getElementById("inputId_categoria_roupa").value.trim().toUpperCase();
+    if (!id_categoria_roupa || id_categoria_roupa.length > 4) {
+        mostrarAviso("A sigla deve conter de 1 a 4 caracteres (ex: FEM, MASC).");
         return;
     }
 
-    document.getElementById("inputId_unidade_medida").value = id_unidade_medida;
-    unidadeMedida = await procurePorChavePrimaria(id_unidade_medida);
+    document.getElementById("inputId_categoria_roupa").value = id_categoria_roupa;
+    categoriaRoupa = await procurePorChavePrimaria(id_categoria_roupa);
     oQueEstaFazendo = '';
     
-    if (unidadeMedida) {
-        mostrarDadosUnidade(unidadeMedida);
+    if (categoriaRoupa) {
+        mostrarDadosCategoria(categoriaRoupa);
         visibilidadeDosBotoes('inline', 'none', 'inline', 'inline', 'none');
         mostrarAviso("Achou no banco, pode alterar ou excluir");
     } else {
@@ -40,7 +40,7 @@ function inserir() {
     bloquearAtributos(false);
     visibilidadeDosBotoes('none', 'none', 'none', 'none', 'inline');
     oQueEstaFazendo = 'inserindo';
-    mostrarAviso("INSERINDO - Digite o nome da unidade e clique em salvar");
+    mostrarAviso("INSERINDO - Digite o nome da categoria e clique em salvar");
 }
 
 function alterar() {
@@ -58,24 +58,40 @@ function excluir() {
 }
 
 async function salvar() {
-    const id_unidade_medida = document.getElementById("inputId_unidade_medida").value.trim().toUpperCase();
-    const nome_unidade_medida = document.getElementById("inputNome_unidade_medida").value;
+    const id_categoria_roupa = document.getElementById("inputId_categoria_roupa").value.trim().toUpperCase();
+    const nome_categoria_roupa = document.getElementById("inputNome_categoria_roupa").value.trim();
 
-    const dadosUnidade = { id_unidade_medida, nome_unidade_medida };
+    // Só confere os campos quando for inserir ou alterar (na exclusão não precisa)
+    if (oQueEstaFazendo === 'inserindo' || oQueEstaFazendo === 'alterando') {
+        if (id_categoria_roupa === "" || id_categoria_roupa.length > 4) {
+            mostrarAviso("A sigla deve conter de 1 a 4 caracteres (ex: FEM, MASC).");
+            return;
+        }
+        if (nome_categoria_roupa === "") {
+            mostrarAviso("Digite o nome da categoria.");
+            return;
+        }
+        if (nome_categoria_roupa.length > 50) {
+            mostrarAviso("O nome da categoria pode ter no máximo 50 letras.");
+            return;
+        }
+    }
+
+    const dadosCategoria = { id_categoria_roupa, nome_categoria_roupa };
 
     try {
         if (oQueEstaFazendo === 'inserindo') {
-            const resp = await fetch(`${URL_API}/unidade_medida`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dadosUnidade) });
+            const resp = await fetch(`${URL_API}/categoria_roupa`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dadosCategoria) });
             const data = await resp.json();
             if (!data.sucesso) return mostrarAviso(data.mensagem);
             mostrarAviso("Inserido no Banco de Dados com sucesso!");
         } else if (oQueEstaFazendo === 'alterando') {
-            const resp = await fetch(`${URL_API}/unidade_medida/${id_unidade_medida}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dadosUnidade) });
+            const resp = await fetch(`${URL_API}/categoria_roupa/${id_categoria_roupa}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dadosCategoria) });
             const data = await resp.json();
             if (!data.sucesso) return mostrarAviso(data.mensagem);
             mostrarAviso("Alterado no Banco de Dados com sucesso!");
         } else if (oQueEstaFazendo === 'excluindo') {
-            const resposta = await fetch(`${URL_API}/unidade_medida/${id_unidade_medida}`, { method: 'DELETE' });
+            const resposta = await fetch(`${URL_API}/categoria_roupa/${id_categoria_roupa}`, { method: 'DELETE' });
             const data = await resposta.json();
             if (!data.sucesso) {
                 mostrarAviso(data.mensagem || "Erro ao excluir no servidor.");
@@ -86,7 +102,7 @@ async function salvar() {
 
         visibilidadeDosBotoes('inline', 'none', 'none', 'none', 'none');
         limparAtributos();
-        document.getElementById("inputId_unidade_medida").value = "";
+        document.getElementById("inputId_categoria_roupa").value = "";
         listar();
     } catch (erro) {
         mostrarAviso("Erro ao efetuar operação no servidor.");
@@ -95,15 +111,15 @@ async function salvar() {
 
 async function listar() {
     try {
-        const resposta = await fetch(`${URL_API}/unidade_medida/listar`);
+        const resposta = await fetch(`${URL_API}/categoria_roupa/listar`);
         const data = await resposta.json();
         
         if (data.sucesso) {
             let texto = "";
-            for (let linha of data.unidades) {
-                texto += `<b>[${linha.id_unidade_medida}]</b> - ${linha.nome_unidade_medida}<br>`;
+            for (let linha of data.categorias) {
+                texto += `<b>[${linha.id_categoria_roupa}]</b> - ${linha.nome_categoria_roupa}<br>`;
             }
-            document.getElementById("outputSaida").innerHTML = texto || "Nenhuma unidade de medida cadastrada.";
+            document.getElementById("outputSaida").innerHTML = texto || "Nenhuma categoria cadastrada.";
         } else {
             document.getElementById("outputSaida").innerHTML = `Erro no banco: ${data.mensagem}`;
         }
@@ -124,22 +140,22 @@ function mostrarAviso(mensagem) {
     document.getElementById("divAviso").innerHTML = mensagem;
 }
 
-function mostrarDadosUnidade(u) {
-    document.getElementById("inputId_unidade_medida").value = u.id_unidade_medida;
-    document.getElementById("inputNome_unidade_medida").value = u.nome_unidade_medida;
+function mostrarDadosCategoria(u) {
+    document.getElementById("inputId_categoria_roupa").value = u.id_categoria_roupa;
+    document.getElementById("inputNome_categoria_roupa").value = u.nome_categoria_roupa;
     bloquearAtributos(true);
 }
 
 function limparAtributos() {
-    unidadeMedida = null;
+    categoriaRoupa = null;
     oQueEstaFazendo = '';
-    document.getElementById("inputNome_unidade_medida").value = "";
+    document.getElementById("inputNome_categoria_roupa").value = "";
     bloquearAtributos(true);
 }
 
 function bloquearAtributos(soLeitura) {
-    document.getElementById("inputId_unidade_medida").readOnly = !soLeitura;
-    document.getElementById("inputNome_unidade_medida").readOnly = soLeitura;
+    document.getElementById("inputId_categoria_roupa").readOnly = !soLeitura;
+    document.getElementById("inputNome_categoria_roupa").readOnly = soLeitura;
 }
 
 function visibilidadeDosBotoes(btP, btI, btA, btE, btS) {

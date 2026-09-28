@@ -57,12 +57,29 @@ function excluir() {
 }
 
 async function salvar() {
-    const id_cargo = parseInt(document.getElementById("inputId_cargo").value, 10);
+    const textoId = document.getElementById("inputId_cargo").value;
+    const id_cargo = parseInt(textoId, 10);
     const nome_cargo = document.getElementById("inputNome_cargo").value.trim();
 
     if (isNaN(id_cargo)) {
         mostrarAviso("O ID do cargo deve ser um número válido.");
         return;
+    }
+
+    // Só confere os campos quando for inserir ou alterar (na exclusão não precisa)
+    if (oQueEstaFazendo === 'inserindo' || oQueEstaFazendo === 'alterando') {
+        if (!Number.isInteger(Number(textoId)) || id_cargo < 0) {
+            mostrarAviso("O ID do cargo precisa ser um número inteiro (0 ou mais).");
+            return;
+        }
+        if (nome_cargo === "") {
+            mostrarAviso("Digite o nome do cargo.");
+            return;
+        }
+        if (nome_cargo.length > 45) {
+            mostrarAviso("O nome do cargo pode ter no máximo 45 letras.");
+            return;
+        }
     }
 
     const dadosCargo = { id_cargo, nome_cargo };

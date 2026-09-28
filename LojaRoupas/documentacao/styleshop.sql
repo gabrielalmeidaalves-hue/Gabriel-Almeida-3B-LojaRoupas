@@ -17,9 +17,9 @@ CREATE TABLE public.cargo (
     nome_cargo character varying(45)
 );
 
-CREATE TABLE public.unidade_medida (
-    id_unidade_medida character varying(2) NOT NULL,
-    nome_unidade_medida character varying(30)
+CREATE TABLE public.categoria_roupa (
+    id_categoria_roupa character varying(4) NOT NULL,
+    nome_categoria_roupa character varying(50) NOT NULL
 );
 
 CREATE TABLE public.forma_pagamento (
@@ -46,7 +46,9 @@ CREATE TABLE public.produto (
     nome_produto character varying(45),
     quantidade_estoque_produto integer,
     preco_unitario_produto double precision,
-    id_unidade_medida character varying(2)
+    id_categoria_roupa character varying(4),
+    tamanho character varying(10),
+    cor character varying(30)
 );
 
 -- Tabelas com múltiplas dependências
@@ -133,7 +135,7 @@ ALTER TABLE ONLY public.produto ALTER COLUMN id_produto SET DEFAULT nextval('pub
 -- Chaves Primárias
 ALTER TABLE ONLY public.pessoa ADD CONSTRAINT pessoa_pkey PRIMARY KEY (cpf_pessoa);
 ALTER TABLE ONLY public.cargo ADD CONSTRAINT cargo_pkey PRIMARY KEY (id_cargo);
-ALTER TABLE ONLY public.unidade_medida ADD CONSTRAINT unidade_medida_pkey PRIMARY KEY (id_unidade_medida);
+ALTER TABLE ONLY public.categoria_roupa ADD CONSTRAINT categoria_roupa_pkey PRIMARY KEY (id_categoria_roupa);
 ALTER TABLE ONLY public.forma_pagamento ADD CONSTRAINT forma_pagamento_pkey PRIMARY KEY (id_forma_pagamento);
 ALTER TABLE ONLY public.cliente ADD CONSTRAINT cliente_pkey PRIMARY KEY (pessoa_cpf_pessoa);
 ALTER TABLE ONLY public.funcionario ADD CONSTRAINT funcionario_pkey PRIMARY KEY (pessoa_cpf_pessoa);
@@ -149,7 +151,7 @@ ALTER TABLE ONLY public.cliente ADD CONSTRAINT fk_cliente_pessoa FOREIGN KEY (pe
 ALTER TABLE ONLY public.funcionario ADD CONSTRAINT fk_funcionario_pessoa FOREIGN KEY (pessoa_cpf_pessoa) REFERENCES public.pessoa (cpf_pessoa);
 ALTER TABLE ONLY public.funcionario ADD CONSTRAINT fk_funcionario_cargo FOREIGN KEY (cargo_id_cargo) REFERENCES public.cargo (id_cargo);
 
-ALTER TABLE ONLY public.produto ADD CONSTRAINT fk_produto_unidade_medida FOREIGN KEY (id_unidade_medida) REFERENCES public.unidade_medida (id_unidade_medida);
+ALTER TABLE ONLY public.produto ADD CONSTRAINT fk_produto_categoria_roupa FOREIGN KEY (id_categoria_roupa) REFERENCES public.categoria_roupa (id_categoria_roupa);
 
 ALTER TABLE ONLY public.pedido ADD CONSTRAINT fk_pedido_cliente FOREIGN KEY (cliente_pessoa_cpf_pessoa) REFERENCES public.cliente (pessoa_cpf_pessoa);
 ALTER TABLE ONLY public.pedido ADD CONSTRAINT fk_pedido_funcionario FOREIGN KEY (funcionario_pessoa_cpf_pessoa) REFERENCES public.funcionario (pessoa_cpf_pessoa);
@@ -195,14 +197,12 @@ INSERT INTO public.cargo VALUES (1, 'Vendedor');
 INSERT INTO public.cargo VALUES (111, 'cento e onze dddd');
 INSERT INTO public.cargo VALUES (2, 'Gerente');
 
--- 5.3 UNIDADE_MEDIDA
-INSERT INTO public.unidade_medida VALUES ('UN', 'Unidade');
-INSERT INTO public.unidade_medida VALUES ('KG', 'Quilograma');
-INSERT INTO public.unidade_medida VALUES ('G', 'Grama');
-INSERT INTO public.unidade_medida VALUES ('L', 'Litro');
-INSERT INTO public.unidade_medida VALUES ('ML', 'Mililitro');
-INSERT INTO public.unidade_medida VALUES ('CX', 'Caixa');
-INSERT INTO public.unidade_medida VALUES ('PC', 'Pacote');
+-- 5.3 CATEGORIA_ROUPA (substitui UNIDADE_MEDIDA do CandyShop; ID é uma sigla de até 4 letras)
+INSERT INTO public.categoria_roupa VALUES ('FEM', 'Feminino');
+INSERT INTO public.categoria_roupa VALUES ('MASC', 'Masculino');
+INSERT INTO public.categoria_roupa VALUES ('VER', 'Verão');
+INSERT INTO public.categoria_roupa VALUES ('INV', 'Inverno');
+INSERT INTO public.categoria_roupa VALUES ('INF', 'Infantil');
 
 -- 5.4 FORMA_PAGAMENTO
 INSERT INTO public.forma_pagamento VALUES (1, 'Dinheiro');
@@ -244,17 +244,17 @@ INSERT INTO public.funcionario VALUES ('00000000000', 0, 0, 0);
 INSERT INTO public.funcionario VALUES ('1', 1111, 2, 1);
 
 -- 5.7 PRODUTO
-INSERT INTO public.produto VALUES (8, 'Pão de Mel', 40, 60, 'UN');
-INSERT INTO public.produto VALUES (9, 'Doce de Leite', 30, 85, 'UN');
-INSERT INTO public.produto VALUES (4, 'Biscoito', 80, 32, 'PC');
-INSERT INTO public.produto VALUES (1, 'Chocolate', 100, 55, 'UN');
-INSERT INTO public.produto VALUES (3, 'Pirulito', 150, 10, 'UN');
-INSERT INTO public.produto VALUES (5, 'Refrigerante', 50, 70, 'L');
-INSERT INTO public.produto VALUES (7, 'Chiclete', 300, 75, 'PC');
-INSERT INTO public.produto VALUES (10, 'Sorvete', 20, 12, 'UN');
-INSERT INTO public.produto VALUES (2, 'Bala', 200, 43, 'PC');
-INSERT INTO public.produto VALUES (6, 'Suco', 60, 45, 'L');
-INSERT INTO public.produto VALUES (50, 'cinquenta', 50, 50, 'UN');
+INSERT INTO public.produto VALUES (8, 'Camiseta Básica', 40, 60, 'MASC', 'M', 'Preto');
+INSERT INTO public.produto VALUES (9, 'Calça Jeans', 30, 85, 'MASC', '42', 'Azul');
+INSERT INTO public.produto VALUES (4, 'Blusa Casual', 80, 32, 'FEM', 'P', 'Branco');
+INSERT INTO public.produto VALUES (1, 'Camiseta Polo', 100, 55, 'MASC', 'G', 'Azul');
+INSERT INTO public.produto VALUES (3, 'Vestido Floral', 150, 10, 'FEM', 'M', 'Vermelho');
+INSERT INTO public.produto VALUES (5, 'Jaqueta Jeans', 50, 70, 'INV', 'G', 'Azul');
+INSERT INTO public.produto VALUES (7, 'Shorts Esportivo', 300, 75, 'VER', 'M', 'Preto');
+INSERT INTO public.produto VALUES (10, 'Vestido Casual', 20, 12, 'FEM', 'P', 'Verde');
+INSERT INTO public.produto VALUES (2, 'Camiseta Estampada', 200, 43, 'VER', 'P', 'Branco');
+INSERT INTO public.produto VALUES (6, 'Blusa de Frio', 60, 45, 'INV', 'G', 'Cinza');
+INSERT INTO public.produto VALUES (50, 'Boné', 50, 50, 'VER', 'Único', 'Preto');
 
 -- 5.8 PEDIDO
 INSERT INTO public.pedido VALUES (3, '2024-02-03', '55555555555', '66666666666');
@@ -430,3 +430,5 @@ INSERT INTO public.pedido_has_produto VALUES (2, 66, 100, 43);
 
 -- 5.11 PAGAMENTO_HAS_FORMA_PAGAMENTO
 INSERT INTO public.pagamento_has_forma_pagamento VALUES (1, 1, 20);
+
+

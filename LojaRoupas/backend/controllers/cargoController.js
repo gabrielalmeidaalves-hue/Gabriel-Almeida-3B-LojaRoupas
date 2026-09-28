@@ -43,6 +43,14 @@ exports.criarCargo = async (req, res) => {
   } catch (error) {
     console.error('Erro ao criar cargo:', error);
 
+    // Verifica se o ID já existe
+    if (error.code === '23505') {
+      return res.status(400).json({
+        sucesso: false,
+        mensagem: 'Este ID de cargo já está cadastrado'
+      });
+    }
+
     // Verifica se é erro de violação de constraint NOT NULL
     if (error.code === '23502') {
       return res.status(400).json({
@@ -85,6 +93,11 @@ exports.atualizarCargo = async (req, res) => {
     const { nome_cargo } = req.body;
 
     // Verifica se o cargo existe
+    // Não deixa salvar o nome vazio
+    if (nome_cargo === '') {
+      return res.status(400).json({ sucesso: false, mensagem: 'O nome do cargo é obrigatório' });
+    }
+
     const existingPersonResult = await query(
       'SELECT * FROM cargo WHERE id_cargo = $1',
       [id]

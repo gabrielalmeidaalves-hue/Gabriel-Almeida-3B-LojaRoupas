@@ -8,7 +8,7 @@ const { query } = require('./database');
 
 // Importa as rotas
 const produtoRoutes = require('./routes/produtoRoutes');
-const unidadeMedidaRoutes = require('./routes/unidadeMedidaRoutes');
+const categoriaRoupaRoutes = require('./routes/categoriaRoupaRoutes');
 const cargoRoutes = require('./routes/cargoRoutes');
 
 const app = express();
@@ -21,7 +21,7 @@ app.use('/imagens', express.static(path.join(__dirname, '../imagens')));
 
 // Definir Rotas
 app.use('/produto', produtoRoutes);
-app.use('/unidade_medida', unidadeMedidaRoutes);
+app.use('/categoria_roupa', categoriaRoupaRoutes);
 
 
 //clienteRoutes tem que vir antes de pessoaRoutes

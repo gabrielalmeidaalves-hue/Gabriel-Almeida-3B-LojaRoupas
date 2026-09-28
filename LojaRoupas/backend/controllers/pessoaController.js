@@ -95,6 +95,14 @@ exports.atualizarPessoa = async (req, res) => {
     const id = parseInt(req.params.id);
     const { nome_pessoa, data_nascimento_pessoa, endereco_pessoa, senha_pessoa, email_pessoa } = req.body;
 
+    // Não deixa salvar campos vazios
+    if (nome_pessoa === '' || endereco_pessoa === '' || senha_pessoa === '' || email_pessoa === '') {
+      return res.status(400).json({
+        sucesso: false,
+        mensagem: 'Nome, email, endereço e senha não podem ficar vazios'
+      });
+    }
+
     if (email_pessoa) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email_pessoa)) {

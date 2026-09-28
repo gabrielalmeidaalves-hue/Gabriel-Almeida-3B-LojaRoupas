@@ -1,24 +1,22 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRUD Produto</title>
+    <title>CRUD Produto - StyleShop</title>
     <link rel="stylesheet" href="produto.css">
 </head>
-
 <body onload="inicializar()">
     <header>
         <h1>Cadastro de Produtos</h1>
-        <p>Gerencie o estoque de produtos do sistema.</p>
+        <p>Gerencie o estoque de roupas da StyleShop.</p>
     </header>
 
     <main class="container-master">
         <div class="conteudo-principal">
             <section class="form-esquerda">
                 <h2>Dados do Produto</h2>
-                
+
                 <label for="inputId_produto">ID do Produto</label>
                 <div class="linha-id">
                     <input type="text" name="inputId_produto" id="inputId_produto" placeholder="Ex: 1">
@@ -28,13 +26,19 @@
                     <input type="button" value="Excluir" id="btExcluir" onclick="excluir()" style="display:none;">
                 </div>
 
-                <label for="inputNome_produto">Nome do Produto</label>
+                <label for="inputNome_produto">Nome da Roupa</label>
                 <input type="text" name="inputNome_produto" id="inputNome_produto">
 
-                <label for="selectId_unidade_medida">Unidade de Medida</label>
-                <select name="selectId_unidade_medida" id="selectId_unidade_medida" disabled>
+                <label for="selectId_categoria_roupa">Categoria da Roupa</label>
+                <select name="selectId_categoria_roupa" id="selectId_categoria_roupa" disabled>
                     <option value="">Carregando...</option>
                 </select>
+
+                <label for="inputTamanho">Tamanho</label>
+                <input type="text" name="inputTamanho" id="inputTamanho" placeholder="Ex: P, M, G, GG">
+
+                <label for="inputCor">Cor</label>
+                <input type="text" name="inputCor" id="inputCor" placeholder="Ex: Preto">
 
                 <label for="inputQuantidade_estoque_produto">Quantidade em Estoque</label>
                 <input type="number" name="inputQuantidade_estoque_produto" id="inputQuantidade_estoque_produto">
@@ -51,26 +55,25 @@
             </section>
 
             <aside class="form-direita">
-                <h2>Imagem do Produto</h2>
+                <h2>Imagem da Roupa</h2>
                 <p class="instrucao-imagem">(Clique na imagem para alterar)</p>
                 <div class="img-container">
-                    <img id="imgProduto" src="http://localhost:3001/imagens/silhueta.png" alt="Imagem do Produto" onclick="acionarUpload()">
+                    <img id="imgProduto" src="http://localhost:3001/imagens/silhueta.png" alt="Imagem da Roupa" onclick="acionarUpload()">
                     <input type="file" id="inputImagem" accept="image/*" style="display: none;" onchange="previewImagem()">
                 </div>
             </aside>
         </div>
 
         <section class="lista-produto">
-            <h3>Produtos Cadastrados</h3>
+            <h3>Roupas Cadastradas</h3>
             <div id="outputSaida">Carregando...</div>
         </section>
     </main>
 
     <footer>
-        <p>&copy; 2026 Sistema CRUD Produtos. Todos os direitos reservados.</p>
+        <p>&copy; 2026 StyleShop. Todos os direitos reservados.</p>
     </footer>
 
     <script src="./produto.js"></script>
 </body>
-
 </html>

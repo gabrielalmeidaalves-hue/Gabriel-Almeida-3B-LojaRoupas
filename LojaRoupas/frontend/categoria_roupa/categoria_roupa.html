@@ -4,34 +4,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRUD Unidade de Medida</title>
-    <link rel="stylesheet" href="unidade_medida.css">
+    <title>CRUD Categoria de Roupa - StyleShop</title>
+    <link rel="stylesheet" href="categoria_roupa.css">
 </head>
 
 <body onload="listar()">
     <header>
-        <h1>Cadastro de Unidades de Medida</h1>
-        <p>Gerencie as unidades de medida do sistema.</p>
+        <h1>Cadastro de Categorias de Roupas</h1>
+        <p>Gerencie as categorias de roupas do sistema.</p>
     </header>
 
     <main class="container-master">
         <div class="conteudo-principal">
             <section class="form-esquerda">
-                <h2>Dados da Unidade de Medida</h2>
+                <h2>Dados da Categoria</h2>
                 
-                <label for="inputId_unidade_medida">Sigla / ID da Unidade (Até 2 letras)</label>
+                <label for="inputId_categoria_roupa">Sigla / ID da Categoria (Até 4 letras)</label>
                 <div class="linha-id">
-                    <input type="text" name="inputId_unidade_medida" id="inputId_unidade_medida" maxlength="2" placeholder="Ex: KG" style="text-transform: uppercase;">
+                    <input type="text" name="inputId_categoria_roupa" id="inputId_categoria_roupa" maxlength="4" placeholder="Ex: FEM" style="text-transform: uppercase;">
                     <input type="button" value="Procure" id="btProcure" onclick="procure()">
                     <input type="button" value="Inserir" id="btInserir" onclick="inserir()" style="display:none;">
                     <input type="button" value="Alterar" id="btAlterar" onclick="alterar()" style="display:none;">
                     <input type="button" value="Excluir" id="btExcluir" onclick="excluir()" style="display:none;">
                 </div>
 
-                <label for="inputNome_unidade_medida">Nome da Unidade</label>
-                <input type="text" name="inputNome_unidade_medida" id="inputNome_unidade_medida" placeholder="Ex: Quilograma">
+                <label for="inputNome_categoria_roupa">Nome da Categoria</label>
+                <input type="text" name="inputNome_categoria_roupa" id="inputNome_categoria_roupa" placeholder="Ex: Feminino">
 
-                <div id="divAviso">Informe a sigla (ex: KG, UN) e clique em Procure</div>
+                <div id="divAviso">Informe a sigla (ex: FEM, MASC, VER, INV, INF) e clique em Procure</div>
 
                 <div class="botoes-acao">
                     <input type="button" value="Salvar" id="btSalvar" onclick="salvar()" style="display:none;">
@@ -40,17 +40,17 @@
             </section>
         </div>
 
-        <section class="lista-unidades">
-            <h3>Unidades de Medida Cadastradas</h3>
+        <section class="lista-categorias">
+            <h3>Categorias Cadastradas</h3>
             <div id="outputSaida">Carregando...</div>
         </section>
     </main>
 
     <footer>
-        <p>&copy; 2026 Sistema CRUD Unidades de Medida. Todos os direitos reservados.</p>
+        <p>&copy; 2026 StyleShop. Todos os direitos reservados.</p>
     </footer>
 
-    <script src="./unidade_medida.js"></script>
+    <script src="./categoria_roupa.js"></script>
 </body>
 
 </html>
