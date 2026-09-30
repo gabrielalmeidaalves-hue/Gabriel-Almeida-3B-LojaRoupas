@@ -10,7 +10,7 @@ Alterações necessárias:
 
 ## Banco
 1. Execute `documentacao/CRIAR_BANCO.sql`.
-2. Conecte-se ao banco `styleshop`.
+2. Crie o banco `styleshop`.
 3. Execute `documentacao/styleshop.sql`.
 
 O `backend/.env` já usa `DB_NAME=styleshop`.

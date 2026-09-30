@@ -142,10 +142,10 @@ async function salvar() {
     // Só confere os campos quando for inserir ou alterar (na exclusão não precisa)
     if (oQueEstaFazendo === 'inserindo' || oQueEstaFazendo === 'alterando') {
 
-        if (id_produto === "" || !Number.isInteger(Number(id_produto))) {
-            mostrarAviso("O ID do produto precisa ser um número inteiro.");
-            return;
-        }
+if (textoEstoque === "" || isNaN(textoEstoque) || textoEstoque < 0) {
+    mostrarAviso("A quantidade em estoque precisa ser um número inteiro (0 ou mais).");
+    return;
+}
         if (nome_produto === "") {
             mostrarAviso("Digite o nome da roupa.");
             return;
@@ -178,10 +178,10 @@ async function salvar() {
             mostrarAviso("A quantidade em estoque precisa ser um número inteiro (0 ou mais).");
             return;
         }
-        if (textoPreco === "" || isNaN(Number(textoPreco)) || Number(textoPreco) <= 0) {
-            mostrarAviso("O preço precisa ser um número maior que zero.");
-            return;
-        }
+    if (textoPreco === "" || isNaN(textoPreco) || textoPreco <= 0) {
+    mostrarAviso("O preço precisa ser um número maior que zero.");
+    return;
+}
     }
 
     const quantidade_estoque_produto = parseInt(textoEstoque) || 0;
