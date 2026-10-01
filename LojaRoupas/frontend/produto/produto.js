@@ -1,5 +1,5 @@
 const URL_API = 'http://localhost:3001';
-const SILHUETA_URL = `${URL_API}/imagens/silhueta.png`;
+const SILHUETA_URL = `${URL_API}/imagens/silhueta.webp`;
 
 let oQueEstaFazendo = '';
 let produto = null;
@@ -60,18 +60,24 @@ function previewImagem() {
 
 async function uploadImagemParaServidor(id) {
     const inputFiles = document.getElementById('inputImagem').files;
-    if (inputFiles.length === 0) return;
+    if (inputFiles.length === 0) return '';
 
     const formData = new FormData();
     formData.append('imagem', inputFiles[0]);
 
     try {
-        await fetch(`${URL_API}/produto/upload/${id}`, {
+        const resposta = await fetch(`${URL_API}/produto/upload/${id}`, {
             method: 'POST',
             body: formData
         });
+        const data = await resposta.json();
+        if (!data.sucesso) {
+            return data.mensagem;
+        }
+        return '';
     } catch (erro) {
         console.error("Erro ao enviar imagem:", erro);
+        return 'Erro ao enviar a imagem.';
     }
 }
 
@@ -90,6 +96,11 @@ async function procure() {
 
     if (isNaN(id_produto) || !Number.isInteger(Number(id_produto)) || id_produto === "") {
         mostrarAviso("Precisa ser um número inteiro");
+        return;
+    }
+
+    if (Number(id_produto) < 0) {
+        mostrarAviso("O ID não pode ser negativo");
         return;
     }
 
@@ -207,8 +218,12 @@ if (textoEstoque === "" || isNaN(textoEstoque) || textoEstoque < 0) {
             const data = await resposta.json();
             if (!data.sucesso) return mostrarAviso(data.mensagem);
 
-            await uploadImagemParaServidor(id_produto);
-            mostrarAviso("Inserido no Banco de Dados com sucesso!");
+            const erroImagem = await uploadImagemParaServidor(id_produto);
+            if (erroImagem) {
+                mostrarAviso("Produto inserido, mas a imagem falhou: " + erroImagem);
+            } else {
+                mostrarAviso("Inserido no Banco de Dados com sucesso!");
+            }
 
         } else if (oQueEstaFazendo === 'alterando') {
             const resposta = await fetch(`${URL_API}/produto/${id_produto}`, {
@@ -219,8 +234,12 @@ if (textoEstoque === "" || isNaN(textoEstoque) || textoEstoque < 0) {
             const data = await resposta.json();
             if (!data.sucesso) return mostrarAviso(data.mensagem);
 
-            await uploadImagemParaServidor(id_produto);
-            mostrarAviso("Alterado no Banco de Dados com sucesso!");
+            const erroImagem = await uploadImagemParaServidor(id_produto);
+            if (erroImagem) {
+                mostrarAviso("Produto alterado, mas a imagem falhou: " + erroImagem);
+            } else {
+                mostrarAviso("Alterado no Banco de Dados com sucesso!");
+            }
 
         } else if (oQueEstaFazendo === 'excluindo') {
             const resposta = await fetch(`${URL_API}/produto/${id_produto}`, { method: 'DELETE' });
@@ -303,7 +322,7 @@ function bloquearAtributos(soLeitura) {
     document.getElementById("inputId_produto").readOnly = !soLeitura;
     document.getElementById("inputNome_produto").readOnly = soLeitura;
     document.getElementById("selectId_categoria_roupa").disabled = soLeitura;
-    document.getElementById("inputTamanho").readOnly = soLeitura;
+    document.getElementById("inputTamanho").disabled  = soLeitura;
     document.getElementById("inputCor").readOnly = soLeitura;
     document.getElementById("inputQuantidade_estoque_produto").readOnly = soLeitura;
     document.getElementById("inputPreco_unitario_produto").readOnly = soLeitura;

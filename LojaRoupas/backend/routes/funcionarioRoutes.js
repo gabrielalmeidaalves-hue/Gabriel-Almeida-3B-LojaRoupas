@@ -4,7 +4,6 @@ const funcionarioController = require('./../controllers/funcionarioController');
 
 // CRUD de Funcionarios
 
-router.get('/abrirCrudFuncionario', funcionarioController.abrirCrudFuncionario);
 router.get('/', funcionarioController.listarFuncionarios);
 router.post('/', funcionarioController.criarFuncionario);
 router.get('/:id', funcionarioController.obterFuncionario);

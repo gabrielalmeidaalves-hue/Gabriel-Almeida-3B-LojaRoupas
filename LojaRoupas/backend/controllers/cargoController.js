@@ -1,14 +1,10 @@
 const { query } = require('../database');
 const path = require('path');
 
+// Não existe login nem cookie-parser: req.cookies era undefined e a rota quebrava
+// (TypeError). Agora só abre a tela.
 exports.abrirCrudCargo = (req, res) => {
-  const usuario = req.cookies.usuarioLogado; // O cookie deve conter o nome/ID do usuário
-
-  if (usuario) {
-    res.sendFile(path.join(__dirname, '../../frontend/cargo/cargo.html'));
-  } else {
-    res.redirect('/login');
-  }
+  res.sendFile(path.join(__dirname, '../../frontend/cargo/cargo.html'));
 };
 
 exports.listarCargos = async (req, res) => {
@@ -27,6 +23,13 @@ exports.criarCargo = async (req, res) => {
     const { id_cargo, nome_cargo } = req.body;
 
     // Validação básica
+    if (id_cargo === undefined || id_cargo === '' || isNaN(Number(id_cargo)) || Number(id_cargo) < 0) {
+      return res.status(400).json({
+        sucesso: false,
+        mensagem: 'O ID do cargo deve ser um número (0 ou mais)'
+      });
+    }
+
     if (!nome_cargo) {
       return res.status(400).json({
         sucesso: false,

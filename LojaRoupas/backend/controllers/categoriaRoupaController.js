@@ -105,7 +105,12 @@ exports.deletarCategoriaRoupa = async (req, res) => {
             return res.status(400).json({ sucesso: false, mensagem: 'ID inválido.' });
         }
 
-        await query('DELETE FROM public.categoria_roupa WHERE id_categoria_roupa = $1', [id]);
+        const resultado = await query('DELETE FROM public.categoria_roupa WHERE id_categoria_roupa = $1', [id]);
+
+        // Antes: excluir uma sigla inexistente respondia "excluída com sucesso"
+        if (resultado.rowCount === 0) {
+            return res.status(404).json({ sucesso: false, mensagem: 'Categoria não encontrada.' });
+        }
 
         res.json({ sucesso: true, mensagem: 'Categoria excluída com sucesso!' });
     } catch (error) {

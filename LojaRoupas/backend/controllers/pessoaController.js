@@ -1,14 +1,23 @@
 const { query } = require('../database');
 const path = require('path');
 
+
 exports.abrirCrudPessoa = (req, res) => {
-  const usuario = req.cookies ? req.cookies.usuarioLogado : null;
-  if (usuario) {
-    res.sendFile(path.join(__dirname, '../../frontend/pessoa/pessoa.html'));
-  } else {
-    res.redirect('/login');
-  }
+  res.sendFile(path.join(__dirname, '../../frontend/pessoa/pessoa.html'));
 };
+
+function cpfValido(cpf) {
+  if (cpf === undefined || cpf === null || cpf === '') {
+    return false;
+  }
+  if (isNaN(Number(cpf)) || Number(cpf) < 0) {
+    return false;
+  }
+  if (String(cpf).length != 11) {
+    return false;
+  }
+  return true;
+}
 
 exports.listarPessoas = async (req, res) => {
   try {
@@ -23,6 +32,14 @@ exports.listarPessoas = async (req, res) => {
 exports.criarPessoa = async (req, res) => {
   try {
     const { cpf_pessoa, nome_pessoa, data_nascimento_pessoa, endereco_pessoa, senha_pessoa, email_pessoa } = req.body;
+
+    if (!cpfValido(cpf_pessoa)) {
+      return res.status(400).json({
+        sucesso: false,
+        mensagem: 'CPF deve conter apenas números (11 digitos)'
+      });
+    }
+
 
     if (!nome_pessoa || !endereco_pessoa || !senha_pessoa || !email_pessoa) {
       return res.status(400).json({
@@ -55,6 +72,14 @@ exports.criarPessoa = async (req, res) => {
       });
     }
 
+    // CPF repetido (chave primária) - antes caía em "Erro interno do servidor"
+    if (error.code === '23505') {
+      return res.status(400).json({
+        sucesso: false,
+        mensagem: 'Já existe uma pessoa cadastrada com este CPF'
+      });
+    }
+
     if (error.code === '23502') {
       return res.status(400).json({
         sucesso: false,
@@ -68,10 +93,10 @@ exports.criarPessoa = async (req, res) => {
 
 exports.obterPessoa = async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = req.params.id;
 
-    if (isNaN(id)) {
-      return res.status(400).json({ sucesso: false, mensagem: 'CPF deve ser um número válido' });
+    if (!cpfValido(id)) {
+      return res.status(400).json({ sucesso: false, mensagem: 'CPF deve conter apenas números (11 digitos)' });
     }
 
     const result = await query(
@@ -92,8 +117,12 @@ exports.obterPessoa = async (req, res) => {
 
 exports.atualizarPessoa = async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = req.params.id;
     const { nome_pessoa, data_nascimento_pessoa, endereco_pessoa, senha_pessoa, email_pessoa } = req.body;
+
+    if (!cpfValido(id)) {
+      return res.status(400).json({ sucesso: false, mensagem: 'CPF deve conter apenas números (11 digitos)' });
+    }
 
     // Não deixa salvar campos vazios
     if (nome_pessoa === '' || endereco_pessoa === '' || senha_pessoa === '' || email_pessoa === '') {
@@ -153,7 +182,11 @@ exports.atualizarPessoa = async (req, res) => {
 
 exports.deletarPessoa = async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = req.params.id;
+
+    if (!cpfValido(id)) {
+      return res.status(400).json({ sucesso: false, mensagem: 'CPF deve conter apenas números (11 digitos)' });
+    }
 
     const existingPersonResult = await query(
       'SELECT * FROM pessoa WHERE cpf_pessoa = $1',
@@ -184,66 +217,3 @@ exports.deletarPessoa = async (req, res) => {
   }
 };
 
-exports.obterPessoaPorEmail = async (req, res) => {
-  try {
-    const { email_pessoa } = req.params;
-
-    if (!email_pessoa) {
-      return res.status(400).json({ sucesso: false, mensagem: 'Email é obrigatório' });
-    }
-
-    const result = await query(
-      'SELECT * FROM pessoa WHERE email_pessoa = $1',
-      [email_pessoa]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ sucesso: false, mensagem: 'Pessoa não encontrada' });
-    }
-
-    res.json({ sucesso: true, pessoa: result.rows[0] });
-  } catch (error) {
-    console.error('Erro ao obter pessoa por email:', error);
-    res.status(500).json({ sucesso: false, mensagem: 'Erro interno do servidor' });
-  }
-};
-
-exports.atualizarSenha = async (req, res) => {
-  try {
-    const id = parseInt(req.params.id);
-    const { senha_atual, nova_senha } = req.body;
-
-    if (isNaN(id)) {
-      return res.status(400).json({ sucesso: false, mensagem: 'ID deve ser um número válido' });
-    }
-
-    if (!senha_atual || !nova_senha) {
-      return res.status(400).json({ sucesso: false, mensagem: 'Senha atual e nova senha são obrigatórias' });
-    }
-
-    const personResult = await query(
-      'SELECT * FROM pessoa WHERE cpf_pessoa = $1',
-      [id]
-    );
-
-    if (personResult.rows.length === 0) {
-      return res.status(404).json({ sucesso: false, mensagem: 'Pessoa não encontrada' });
-    }
-
-    const person = personResult.rows[0];
-
-    if (person.senha_pessoa !== senha_atual) {
-      return res.status(400).json({ sucesso: false, mensagem: 'Senha atual incorreta' });
-    }
-
-    const updateResult = await query(
-      'UPDATE pessoa SET senha_pessoa = $1 WHERE cpf_pessoa = $2 RETURNING cpf_pessoa, nome_pessoa, endereco_pessoa, data_nascimento_pessoa',
-      [nova_senha, id]
-    );
-
-    res.json({ sucesso: true, pessoa: updateResult.rows[0] });
-  } catch (error) {
-    console.error('Erro ao atualizar senha:', error);
-    res.status(500).json({ sucesso: false, mensagem: 'Erro interno do servidor' });
-  }
-};

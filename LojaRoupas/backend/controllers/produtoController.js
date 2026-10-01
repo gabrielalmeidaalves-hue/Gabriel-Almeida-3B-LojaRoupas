@@ -44,6 +44,10 @@ exports.criarProduto = async (req, res) => {
             preco_unitario_produto
         } = req.body;
 
+        if (!id_produto || isNaN(Number(id_produto)) || Number(id_produto) < 0) {
+            return res.status(400).json({ sucesso: false, mensagem: 'O ID do produto deve ser um número (0 ou mais).' });
+        }
+
         if (!nome_produto) {
             return res.status(400).json({ sucesso: false, mensagem: 'O nome do produto é obrigatório.' });
         }
@@ -58,6 +62,14 @@ exports.criarProduto = async (req, res) => {
 
         if (!cor) {
             return res.status(400).json({ sucesso: false, mensagem: 'A cor é obrigatória.' });
+        }
+
+        if (isNaN(Number(quantidade_estoque_produto)) || Number(quantidade_estoque_produto) < 0) {
+            return res.status(400).json({ sucesso: false, mensagem: 'A quantidade em estoque deve ser um número (0 ou mais).' });
+        }
+
+        if (isNaN(Number(preco_unitario_produto)) || Number(preco_unitario_produto) < 0) {
+            return res.status(400).json({ sucesso: false, mensagem: 'O preço deve ser um número (0 ou mais).' });
         }
 
         const result = await query(`
@@ -83,6 +95,13 @@ exports.criarProduto = async (req, res) => {
         });
     } catch (error) {
         console.error('Erro ao criar produto:', error);
+        // ID repetido - antes caía em "Erro ao inserir produto no banco de dados."
+        if (error.code === '23505') {
+            return res.status(400).json({
+                sucesso: false,
+                mensagem: 'Já existe um produto cadastrado com este ID.'
+            });
+        }
         if (error.code === '23503') {
             return res.status(400).json({
                 sucesso: false,
@@ -98,7 +117,6 @@ exports.criarProduto = async (req, res) => {
 
 exports.atualizarProduto = async (req, res) => {
     try {
-        const id = parseInt(req.params.id, 10);
         const {
             nome_produto,
             id_categoria_roupa,
@@ -107,6 +125,8 @@ exports.atualizarProduto = async (req, res) => {
             quantidade_estoque_produto,
             preco_unitario_produto
         } = req.body;
+
+        const id = parseInt(req.params.id, 10);
 
         if (isNaN(id)) {
             return res.status(400).json({ sucesso: false, mensagem: 'ID inválido.' });
@@ -126,6 +146,14 @@ exports.atualizarProduto = async (req, res) => {
 
         if (!cor) {
             return res.status(400).json({ sucesso: false, mensagem: 'A cor é obrigatória.' });
+        }
+
+        if (isNaN(Number(quantidade_estoque_produto)) || Number(quantidade_estoque_produto) < 0) {
+            return res.status(400).json({ sucesso: false, mensagem: 'A quantidade em estoque deve ser um número (0 ou mais).' });
+        }
+
+        if (isNaN(Number(preco_unitario_produto)) || Number(preco_unitario_produto) < 0) {
+            return res.status(400).json({ sucesso: false, mensagem: 'O preço deve ser um número (0 ou mais).' });
         }
 
         const result = await query(`
@@ -171,7 +199,12 @@ exports.atualizarProduto = async (req, res) => {
 
 exports.uploadImagem = async (req, res) => {
     try {
-        const id = req.params.id;
+        // SEGURANÇA: o id vai direto para o nome do arquivo (imagens/<id>.png).
+        // Sem validar, um id como "..%2F..%2Falgo" gravava imagem fora da pasta imagens.
+        const id = Number(req.params.id);
+        if (isNaN(id)) {
+            return res.status(400).json({ sucesso: false, mensagem: 'ID inválido.' });
+        }
         if (!req.file) {
             return res.status(400).json({ sucesso: false, mensagem: 'Nenhum arquivo enviado.' });
         }
@@ -198,8 +231,16 @@ exports.uploadImagem = async (req, res) => {
 exports.deletarProduto = async (req, res) => {
     try {
         const id = parseInt(req.params.id, 10);
+        if (isNaN(id)) {
+            return res.status(400).json({ sucesso: false, mensagem: 'ID inválido.' });
+        }
 
-        await query('DELETE FROM public.produto WHERE id_produto = $1', [id]);
+        const resultado = await query('DELETE FROM public.produto WHERE id_produto = $1', [id]);
+
+        // Antes: excluir um ID inexistente respondia "excluído com sucesso"
+        if (resultado.rowCount === 0) {
+            return res.status(404).json({ sucesso: false, mensagem: 'Produto não encontrado.' });
+        }
 
         const imgPath = path.join(__dirname, '../../imagens', `${id}.png`);
         if (fs.existsSync(imgPath)) {
@@ -212,7 +253,7 @@ exports.deletarProduto = async (req, res) => {
         if (error.code === '23503') {
             return res.status(400).json({
                 sucesso: false,
-                mensagem: 'Não é possível excluir: este produto possui pedidos associados.'
+                mensagem: 'Não é possível excluir: este produto possui registros associados.'
             });
         }
         res.status(500).json({ sucesso: false, mensagem: 'Erro ao excluir produto.' });

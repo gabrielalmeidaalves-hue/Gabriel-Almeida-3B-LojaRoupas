@@ -1,18 +1,23 @@
-//import { query } from '../database.js';
 const { query } = require('../database');
-// Funções do controller
 
-const path = require('path');
-
-exports.abrirCrudCliente = (req, res) => {
- // console.log('clienteController - Rota /abrirCrudCliente - abrir o crudCliente');
-  res.sendFile(path.join(__dirname, '../../frontend/cliente/cliente.html'));
+function cpfValido(cpf) {
+  if (cpf === undefined || cpf === null || cpf === '') {
+    return false;
+  }
+  if (isNaN(Number(cpf)) || Number(cpf) < 0) {
+    return false;
+  }
+  if (String(cpf).length != 11) {
+    return false;
+  }
+  return true;
 }
+
+
 
 exports.listarClientes = async (req, res) => {
   try {
-    const result = await query('SELECT cli.pessoa_cpf_pessoa, p.nome_pessoa,cli.renda_cliente,cli.data_cadastro_cliente FROM cliente cli, pessoa p where cli.pessoa_cpf_pessoa = p.cpf_pessoa ORDER BY cli.pessoa_cpf_pessoa ');
-   // console.log('Resultado do SELECT:', result.rows);//verifica se está retornando algo
+    const result = await query('SELECT cli.pessoa_cpf_pessoa, p.nome_pessoa, cli.renda_cliente, cli.data_cadastro_cliente FROM cliente cli, pessoa p WHERE cli.pessoa_cpf_pessoa = p.cpf_pessoa ORDER BY cli.pessoa_cpf_pessoa');
     res.json(result.rows);
   } catch (error) {
     console.error('Erro ao listar clientes:', error);
@@ -20,16 +25,26 @@ exports.listarClientes = async (req, res) => {
   }
 }
 
-
 exports.criarCliente = async (req, res) => {
-  //  console.log('Criando cliente com dados:', req.body);
   try {
     const { pessoa_cpf_pessoa, renda_cliente, data_cadastro_cliente } = req.body;
 
-    // Validação básica
-    if (!renda_cliente) {
+    if (!cpfValido(pessoa_cpf_pessoa)) {
       return res.status(400).json({
-        error: 'O nome do cliente é obrigatório'
+        error: 'CPF deve conter apenas números (11 digitos)'
+      });
+    }
+
+    // Validação básica (antes a mensagem dizia "nome do cliente", mas o campo é a renda)
+    if (!renda_cliente || isNaN(Number(renda_cliente)) || Number(renda_cliente) < 0) {
+      return res.status(400).json({
+        error: 'A renda do cliente é obrigatória e deve ser um número (0 ou mais)'
+      });
+    }
+
+    if (!data_cadastro_cliente) {
+      return res.status(400).json({
+        error: 'A data de cadastro do cliente é obrigatória'
       });
     }
 
@@ -42,12 +57,24 @@ exports.criarCliente = async (req, res) => {
   } catch (error) {
     console.error('Erro ao criar cliente:', error);
 
-
-
-    // Verifica se é erro de violação de constraint NOT NULL
+    // Violação de constraint NOT NULL
     if (error.code === '23502') {
       return res.status(400).json({
         error: 'Dados obrigatórios não fornecidos'
+      });
+    }
+
+    // Já é cliente
+    if (error.code === '23505') {
+      return res.status(400).json({
+        error: 'Esta pessoa já está cadastrada como cliente'
+      });
+    }
+
+    // Pessoa não existe
+    if (error.code === '23503') {
+      return res.status(400).json({
+        error: 'A pessoa informada não existe no cadastro'
       });
     }
 
@@ -57,19 +84,16 @@ exports.criarCliente = async (req, res) => {
 
 exports.obterCliente = async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = req.params.id;
 
-    // console.log("estou no obter cliente id="+ id);
-    if (isNaN(id)) {
-      return res.status(400).json({ error: 'ID deve ser um número válido' });
+    if (!cpfValido(id)) {
+      return res.status(400).json({ error: 'CPF deve conter apenas números (11 digitos)' });
     }
 
     const result = await query(
       'SELECT * FROM cliente WHERE pessoa_cpf_pessoa = $1',
       [id]
     );
-
-    //console.log(result)
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Cliente não encontrado' });
@@ -83,52 +107,46 @@ exports.obterCliente = async (req, res) => {
 }
 
 exports.atualizarCliente = async (req, res) => {
-
-  // console.log('Atualizando cliente com dados:', req.body);
-
   try {
-    const id = parseInt(req.params.id);
+    const id = req.params.id;
     const { renda_cliente, data_cadastro_cliente } = req.body;
 
+    if (!cpfValido(id)) {
+      return res.status(400).json({ error: 'CPF deve conter apenas números (11 digitos)' });
+    }
 
-    // // Verifica se a cliente existe
-    // const existingPersonResult = await query(
-    //   'SELECT * FROM cliente WHERE pessoa_cpf_pessoa = $1',
-    //   [id]
-    // );
+    if (!renda_cliente || isNaN(Number(renda_cliente)) || Number(renda_cliente) < 0) {
+      return res.status(400).json({ error: 'A renda do cliente é obrigatória e deve ser um número (0 ou mais)' });
+    }
 
-    // if (existingPersonResult.rows.length === 0) {
-    //   return res.status(404).json({ error: 'Cliente não encontrada' });
-    // }
+    if (!data_cadastro_cliente) {
+      return res.status(400).json({ error: 'A data de cadastro do cliente é obrigatória' });
+    }
 
-    // Constrói a query de atualização dinamicamente para campos não nulos
-    // const dadosDoClienteVindosViaRequisicao = existingPersonResult.rows[0];
-
-
-    const updatedFields = {
-      renda_cliente: renda_cliente,
-      data_cadastro_cliente: data_cadastro_cliente
-    };
-
-    // Atualiza a cliente
     const updateResult = await query(
       'UPDATE cliente SET renda_cliente = $1, data_cadastro_cliente = $2 WHERE pessoa_cpf_pessoa = $3 RETURNING *',
-      [updatedFields.renda_cliente, updatedFields.data_cadastro_cliente, id]
+      [renda_cliente, data_cadastro_cliente, id]
     );
+
+    // Antes: se o cliente não existisse, devolvia resposta vazia com status 200
+    if (updateResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Cliente não encontrado' });
+    }
 
     res.json(updateResult.rows[0]);
   } catch (error) {
     console.error('Erro ao atualizar cliente:', error);
-
-
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 }
 
 exports.deletarCliente = async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = req.params.id;
 
   try {
+    if (!cpfValido(id)) {
+      return res.status(400).json({ error: 'CPF deve conter apenas números (11 digitos)' });
+    }
 
     // 1. Verifica se o cliente existe
     const existingPersonResult = await query(
@@ -150,22 +168,15 @@ exports.deletarCliente = async (req, res) => {
     res.status(204).send();
 
   } catch (error) {
+    console.error('Erro ao deletar cliente:', error);
 
-    // console.error('Erro ao deletar cliente:', error);
-
-    // Verifica se é erro de violação de foreign key (código 23503)
+    // Violação de foreign key (código 23503)
     if (error.code === '23503') {
-      // Retorna 409 Conflict, que é o mais apropriado para violações de integridade
       return res.status(409).json({
-        // Mensagem de erro mais descritiva baseada no detalhe do DB
-        error: 'Erro de integridade referencial - o cliente não pode ser excluído, pois está associado a outras entidades (ex: pedidos).'
-        // Opcional: detail: error.detail // Você pode enviar o detalhe técnico se precisar no frontend
+        error: 'Erro de integridade referencial - o cliente não pode ser excluído, pois está associado a outras entidades.'
       });
     }
 
-    // Erros internos inesperados
     res.status(500).json({ error: 'Erro interno do servidor ao tentar excluir o cliente.' });
   }
 }
-
-

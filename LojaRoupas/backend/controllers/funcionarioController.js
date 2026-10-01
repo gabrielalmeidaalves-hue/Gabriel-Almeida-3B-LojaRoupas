@@ -1,14 +1,20 @@
 const { query } = require('../database');
-const path = require('path');
 
-exports.abrirCrudFuncionario = (req, res) => {
-  const usuario = req.cookies ? req.cookies.usuarioLogado : null;
-  if (usuario) {
-    res.sendFile(path.join(__dirname, '../../frontend/funcionario/funcionario.html'));
-  } else {
-    res.redirect('/login');
+function cpfValido(cpf) {
+  if (cpf === undefined || cpf === null || cpf === '') {
+    return false;
   }
-};
+  if (isNaN(Number(cpf)) || Number(cpf) < 0) {
+    return false;
+  }
+  if (String(cpf).length != 11) {
+    return false;
+  }
+  return true;
+}
+
+// (a rota /abrirCrudFuncionario foi removida: apontava para frontend/funcionario/funcionario.html,
+//  que não existe - o cadastro de funcionário é feito dentro da tela de Pessoa)
 
 exports.listarFuncionarios = async (req, res) => {
   try {
@@ -27,10 +33,31 @@ exports.criarFuncionario = async (req, res) => {
   try {
     const { pessoa_cpf_pessoa, salario_funcionario, cargo_id_cargo, porcentagem_comissao_funcionario } = req.body;
 
-    if (!salario_funcionario) {
+    if (!cpfValido(pessoa_cpf_pessoa)) {
       return res.status(400).json({
         sucesso: false,
-        mensagem: 'O salário do funcionário é obrigatório'
+        mensagem: 'CPF deve conter apenas números (11 digitos)'
+      });
+    }
+
+    if (!salario_funcionario || isNaN(Number(salario_funcionario)) || Number(salario_funcionario) <= 0) {
+      return res.status(400).json({
+        sucesso: false,
+        mensagem: 'O salário do funcionário é obrigatório e deve ser um número (0 ou mais)'
+      });
+    }
+
+    if (cargo_id_cargo === undefined || cargo_id_cargo === '' || isNaN(Number(cargo_id_cargo))) {
+      return res.status(400).json({
+        sucesso: false,
+        mensagem: 'O cargo do funcionário é obrigatório'
+      });
+    }
+
+    if (porcentagem_comissao_funcionario === undefined || porcentagem_comissao_funcionario === '' || isNaN(Number(porcentagem_comissao_funcionario)) || Number(porcentagem_comissao_funcionario) < 0 || Number(porcentagem_comissao_funcionario) > 100) {
+      return res.status(400).json({
+        sucesso: false,
+        mensagem: 'A comissão deve ser um número de 0 a 100'
       });
     }
 
@@ -50,16 +77,31 @@ exports.criarFuncionario = async (req, res) => {
       });
     }
 
+    if (error.code === '23505') {
+      return res.status(400).json({
+        sucesso: false,
+        mensagem: 'Esta pessoa já está cadastrada como funcionário'
+      });
+    }
+
+    // Cargo ou pessoa inexistente
+    if (error.code === '23503') {
+      return res.status(400).json({
+        sucesso: false,
+        mensagem: 'O cargo ou a pessoa informada não existe no cadastro'
+      });
+    }
+
     res.status(500).json({ sucesso: false, mensagem: 'Erro interno do servidor' });
   }
 };
 
 exports.obterFuncionario = async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = req.params.id;
 
-    if (isNaN(id)) {
-      return res.status(400).json({ sucesso: false, mensagem: 'ID deve ser um número válido' });
+    if (!cpfValido(id)) {
+      return res.status(400).json({ sucesso: false, mensagem: 'CPF deve conter apenas números (11 digitos)' });
     }
 
     const result = await query(
@@ -80,8 +122,12 @@ exports.obterFuncionario = async (req, res) => {
 
 exports.atualizarFuncionario = async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = req.params.id;
     const { salario_funcionario, cargo_id_cargo, porcentagem_comissao_funcionario } = req.body;
+
+    if (!cpfValido(id)) {
+      return res.status(400).json({ sucesso: false, mensagem: 'CPF deve conter apenas números (11 digitos)' });
+    }
 
     const existingPersonResult = await query(
       'SELECT * FROM funcionario WHERE pessoa_cpf_pessoa = $1',
@@ -100,6 +146,14 @@ exports.atualizarFuncionario = async (req, res) => {
       porcentagem_comissao_funcionario: porcentagem_comissao_funcionario !== undefined ? porcentagem_comissao_funcionario : currentFunc.porcentagem_comissao_funcionario
     };
 
+    if (isNaN(Number(updatedFields.salario_funcionario)) || Number(updatedFields.salario_funcionario) < 0) {
+      return res.status(400).json({ sucesso: false, mensagem: 'O salário deve ser um número (0 ou mais)' });
+    }
+
+    if (isNaN(Number(updatedFields.porcentagem_comissao_funcionario)) || Number(updatedFields.porcentagem_comissao_funcionario) < 0 || Number(updatedFields.porcentagem_comissao_funcionario) > 100) {
+      return res.status(400).json({ sucesso: false, mensagem: 'A comissão deve ser um número de 0 a 100' });
+    }
+
     const updateResult = await query(
       'UPDATE funcionario SET salario_funcionario = $1, cargo_id_cargo = $2, porcentagem_comissao_funcionario = $3 WHERE pessoa_cpf_pessoa = $4 RETURNING *',
       [updatedFields.salario_funcionario, updatedFields.cargo_id_cargo, updatedFields.porcentagem_comissao_funcionario, id]
@@ -108,13 +162,25 @@ exports.atualizarFuncionario = async (req, res) => {
     res.json({ sucesso: true, funcionario: updateResult.rows[0] });
   } catch (error) {
     console.error('Erro ao atualizar funcionário:', error);
+
+    if (error.code === '23503') {
+      return res.status(400).json({
+        sucesso: false,
+        mensagem: 'O cargo informado não existe no cadastro'
+      });
+    }
+
     res.status(500).json({ sucesso: false, mensagem: 'Erro interno do servidor' });
   }
 };
 
 exports.deletarFuncionario = async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = req.params.id;
+
+    if (!cpfValido(id)) {
+      return res.status(400).json({ sucesso: false, mensagem: 'CPF deve conter apenas números (11 digitos)' });
+    }
 
     const existingPersonResult = await query(
       'SELECT * FROM funcionario WHERE pessoa_cpf_pessoa = $1',

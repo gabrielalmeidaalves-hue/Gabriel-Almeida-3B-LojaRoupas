@@ -35,7 +35,23 @@
                 </select>
 
                 <label for="inputTamanho">Tamanho</label>
-                <input type="text" name="inputTamanho" id="inputTamanho" placeholder="Ex: P, M, G, GG">
+                <select name="inputTamanho" id="inputTamanho" disabled>
+                    <option value="">Selecione</option>
+                    <option value="PP">PP</option>
+                    <option value="P">P</option>
+                    <option value="M">M</option>
+                    <option value="G">G</option>
+                    <option value="GG">GG</option>
+                    <option value="XG">XG</option>
+                    <option value="XGG">XGG</option>
+                    <option value="XXS">XXS</option>
+                    <option value="XS">XS</option>
+                    <option value="S">S</option>
+                    <option value="L">L</option>
+                    <option value="XL">XL</option>
+                    <option value="XXL">XXL</option>
+                    <option value="Único">Único</option>
+</select>
 
                 <label for="inputCor">Cor</label>
                 <input type="text" name="inputCor" id="inputCor" placeholder="Ex: Preto">
@@ -58,7 +74,7 @@
                 <h2>Imagem da Roupa</h2>
                 <p class="instrucao-imagem">(Clique na imagem para alterar)</p>
                 <div class="img-container">
-                    <img id="imgProduto" src="http://localhost:3001/imagens/silhueta.png" alt="Imagem da Roupa" onclick="acionarUpload()">
+                    <img id="imgProduto" src="http://localhost:3001/imagens/silhueta.webp" alt="Imagem da Roupa" onclick="acionarUpload()">
                     <input type="file" id="inputImagem" accept="image/*" style="display: none;" onchange="previewImagem()">
                 </div>
             </aside>

@@ -136,14 +136,25 @@ async function buscarPessoa() {
         return;
     }
 
+    if (isNaN(Number(id)) || id.length != 11) {
+        mostrarMensagem('O CPF deve ter só números (até 11 dígitos).', 'warning');
+        return;
+    }
+
     bloquearCampos(false);
     searchId.focus();
     try {
         const response = await fetch(`${API_BASE_URL}/pessoa/${id}`);
         const data = await response.json();
 
+        // Erro do servidor (500) não significa "pessoa não encontrada"
+        if (!response.ok && response.status !== 404) {
+            mostrarMensagem(data.mensagem || 'Erro ao buscar pessoa', 'error');
+            return;
+        }
+
         if (response.ok && data.sucesso) {
-            preencherFormulario(data.pessoa);
+            await preencherFormulario(data.pessoa);
             mostrarBotoes(true, false, true, true, false, false);
             mostrarMensagem('Pessoa encontrada!', 'success');
         } else {
@@ -241,7 +252,7 @@ function validarPessoa() {
 
     if (cpf === '') return 'Digite o CPF (ID) da pessoa.';
     if (!/^[0-9]+$/.test(cpf)) return 'O CPF (ID) deve ter só números.';
-    if (cpf.length > 20) return 'O CPF (ID) pode ter no máximo 20 números.';
+    if (cpf.length !== 11) return 'O CPF (ID) deve ter 11 números.';
 
     if (nome === '') return 'Digite o nome.';
     if (nome.length > 60) return 'O nome pode ter no máximo 60 letras.';
@@ -258,6 +269,12 @@ function validarPessoa() {
     if (email === '') return 'Digite o email.';
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'O email digitado não é válido.';
     if (email.length > 75) return 'O email pode ter no máximo 75 letras.';
+
+    // Toda pessoa precisa ser Funcionário e/ou Cliente. Sem isso o cadastro salvava
+    // só na tabela pessoa, deixando um registro "solto" que não aparece em nenhum papel.
+    if (!document.getElementById('checkboxFuncionario').checked && !document.getElementById('checkboxCliente').checked) {
+        return 'Marque pelo menos uma opção: Funcionário e/ou Cliente.';
+    }
 
     if (document.getElementById('checkboxFuncionario').checked) {
         const cargo = document.getElementById('cargo_id_cargo').value;
@@ -322,147 +339,178 @@ async function salvarOperacao() {
     const caminhoCliente = `${API_BASE_URL}/cliente/${currentPersonId}`;
 
     try {
-        let respPessoa = null;
         switch (operacao) {
-            case 'incluir':
-                respPessoa = await fetch(`${API_BASE_URL}/pessoa`, {
+            case 'incluir': {
+                const respPessoa = await fetch(`${API_BASE_URL}/pessoa`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(pessoa)
                 });
-                const dataPessoaInc = await respPessoa.json();
+                const dataPessoa = await respPessoa.json();
 
-                if (!dataPessoaInc.sucesso) {
-                    throw new Error('Erro ao criar pessoa: ' + (dataPessoaInc.mensagem || respPessoa.status));
+                if (!dataPessoa.sucesso) {
+                    throw new Error('Erro ao criar pessoa: ' + (dataPessoa.mensagem || respPessoa.status));
                 }
 
+                // Se o funcionário ou o cliente falhar, desfaz tudo para não sobrar pessoa "solta"
+                let erroPapel = '';
+
                 if (funcionario) {
-                    await fetch(`${API_BASE_URL}/funcionario`, {
+                    const respFunc = await fetch(`${API_BASE_URL}/funcionario`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(funcionario)
                     });
+                    const dataFunc = await respFunc.json();
+                    if (!dataFunc.sucesso) {
+                        erroPapel = 'Erro ao salvar funcionário: ' + (dataFunc.mensagem || respFunc.status);
+                    }
                 }
 
-                if (cliente) {
-                    await fetch(`${API_BASE_URL}/cliente`, {
+                if (erroPapel === '' && cliente) {
+                    const respCli = await fetch(`${API_BASE_URL}/cliente`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(cliente)
                     });
+                    const dataCli = await respCli.json();
+                    if (!respCli.ok) {
+                        erroPapel = 'Erro ao salvar cliente: ' + (dataCli.error || respCli.status);
+                    }
+                }
+
+                if (erroPapel !== '') {
+                    await fetch(caminhoCliente, { method: 'DELETE' });
+                    await fetch(caminhoFunc, { method: 'DELETE' });
+                    await fetch(`${API_BASE_URL}/pessoa/${currentPersonId}`, { method: 'DELETE' });
+                    throw new Error(erroPapel + ' (a pessoa não foi incluída)');
                 }
 
                 mostrarMensagem('Pessoa incluída com sucesso!', 'success');
-                limparFormulario();
-                carregarPessoas();
                 break;
+            }
 
-            case 'alterar':
-                respPessoa = await fetch(`${API_BASE_URL}/pessoa/${currentPersonId}`, {
+            case 'alterar': {
+                const respPessoa = await fetch(`${API_BASE_URL}/pessoa/${currentPersonId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(pessoa)
                 });
-                const dataPessoaAlt = await respPessoa.json();
-                if (!dataPessoaAlt.sucesso) {
-                    throw new Error('Erro ao alterar pessoa: ' + (dataPessoaAlt.mensagem || respPessoa.status));
+                const dataPessoa = await respPessoa.json();
+                if (!dataPessoa.sucesso) {
+                    throw new Error('Erro ao alterar pessoa: ' + (dataPessoa.mensagem || respPessoa.status));
                 }
 
                 // Trata Cliente
-                if (document.getElementById('checkboxCliente').checked) {
+                if (cliente) {
                     const respVerifCli = await fetch(caminhoCliente);
+                    let respCli = null;
                     if (respVerifCli.status === 404) {
-                        await fetch(`${API_BASE_URL}/cliente`, {
+                        respCli = await fetch(`${API_BASE_URL}/cliente`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(cliente)
                         });
                     } else {
-                        await fetch(caminhoCliente, {
+                        respCli = await fetch(caminhoCliente, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(cliente)
                         });
                     }
-                } else {
-                    try {
-                        const respCli = await fetch(caminhoCliente, { method: 'DELETE' });
+                    if (!respCli.ok) {
                         const dataCli = await respCli.json().catch(() => ({}));
-                        if (respCli.status === 409 || dataCli.sucesso === false) {
-                            alert(dataCli.mensagem || 'Não foi possível remover o cliente');
-                            document.getElementById('checkboxCliente').checked = true;
-                        }
-                    } catch (error) {
-                        console.error('Erro ao excluir cliente:', error);
+                        throw new Error('Erro ao salvar cliente: ' + (dataCli.error || respCli.status));
+                    }
+                } else {
+                    const respCli = await fetch(caminhoCliente, { method: 'DELETE' });
+                    if (!respCli.ok && respCli.status !== 404) {
+                        const dataCli = await respCli.json().catch(() => ({}));
+                        document.getElementById('checkboxCliente').checked = true;
+                        throw new Error(dataCli.error || 'Não foi possível remover o cliente');
                     }
                 }
 
                 // Trata Funcionário
-                if (document.getElementById('checkboxFuncionario').checked) {
+                if (funcionario) {
                     const respVerifFunc = await fetch(caminhoFunc);
-                    const dataVerifFunc = await respVerifFunc.json().catch(() => ({}));
-
-                    if (respVerifFunc.status === 404 || !dataVerifFunc.sucesso) {
-                        await fetch(`${API_BASE_URL}/funcionario`, {
+                    let respFunc = null;
+                    if (respVerifFunc.status === 404) {
+                        respFunc = await fetch(`${API_BASE_URL}/funcionario`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(funcionario)
                         });
                     } else {
-                        await fetch(caminhoFunc, {
+                        respFunc = await fetch(caminhoFunc, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(funcionario)
                         });
                     }
+                    const dataFunc = await respFunc.json();
+                    if (!dataFunc.sucesso) {
+                        throw new Error('Erro ao salvar funcionário: ' + (dataFunc.mensagem || respFunc.status));
+                    }
                 } else {
-                    const respVerifFunc = await fetch(caminhoFunc);
-                    const dataVerifFunc = await respVerifFunc.json().catch(() => ({}));
-                    if (respVerifFunc.status === 200 && dataVerifFunc.sucesso) {
-                        await fetch(caminhoFunc, { method: 'DELETE' });
+                    const respFunc = await fetch(caminhoFunc, { method: 'DELETE' });
+                    if (!respFunc.ok && respFunc.status !== 404) {
+                        const dataFunc = await respFunc.json().catch(() => ({}));
+                        document.getElementById('checkboxFuncionario').checked = true;
+                        throw new Error(dataFunc.mensagem || 'Não foi possível remover o funcionário');
                     }
                 }
 
                 mostrarMensagem('Pessoa alterada com sucesso!', 'success');
-                limparFormulario();
-                carregarPessoas();
                 break;
+            }
 
-            case 'excluir':
-                const respCliDel = await fetch(caminhoCliente);
-                if (respCliDel.status === 200) {
-                    await fetch(caminhoCliente, { method: 'DELETE' });
+            case 'excluir': {
+                const respCliDel = await fetch(caminhoCliente, { method: 'DELETE' });
+                if (!respCliDel.ok && respCliDel.status !== 404) {
+                    const dataCliDel = await respCliDel.json().catch(() => ({}));
+                    throw new Error('Erro ao excluir cliente: ' + (dataCliDel.error || respCliDel.status));
                 }
 
-                const respFuncDel = await fetch(caminhoFunc);
-                const dataFuncDel = await respFuncDel.json().catch(() => ({}));
-                if (respFuncDel.status === 200 && dataFuncDel.sucesso) {
-                    await fetch(caminhoFunc, { method: 'DELETE' });
+                const respFuncDel = await fetch(caminhoFunc, { method: 'DELETE' });
+                if (!respFuncDel.ok && respFuncDel.status !== 404) {
+                    const dataFuncDel = await respFuncDel.json().catch(() => ({}));
+                    throw new Error('Erro ao excluir funcionário: ' + (dataFuncDel.mensagem || respFuncDel.status));
                 }
 
                 const respDelPessoa = await fetch(`${API_BASE_URL}/pessoa/${currentPersonId}`, { method: 'DELETE' });
                 const dataDelPessoa = await respDelPessoa.json();
-
                 if (!dataDelPessoa.sucesso) {
                     throw new Error('Erro ao excluir pessoa: ' + (dataDelPessoa.mensagem || respDelPessoa.status));
                 }
 
                 mostrarMensagem('Pessoa excluída com sucesso!', 'success');
-                limparFormulario();
-                carregarPessoas();
                 break;
+            }
+
+            default:
+                return;
         }
     } catch (error) {
+        // Em caso de erro, continua na tela de edição para o usuário corrigir e tentar de novo
+        // (antes o "finally" bloqueava os campos e apagava os botões mesmo com erro)
         console.error('Erro salvarOperacao:', error);
         mostrarMensagem(error.message || 'Erro ao processar operação', 'error');
-    } finally {
-        mostrarBotoes(true, false, false, false, false, false);
-        bloquearCampos(false);
-        document.getElementById('searchId').focus();
+        carregarPessoas();
+        return;
     }
+
+    // Sucesso: volta para o estado inicial
+    operacao = null;
+    limparFormulario();
+    carregarPessoas();
+    mostrarBotoes(true, false, false, false, false, false);
+    bloquearCampos(false);
+    document.getElementById('searchId').focus();
 }
 
 function cancelarOperacao() {
+    operacao = null;
     limparFormulario();
     mostrarBotoes(true, false, false, false, false, false);
     bloquearCampos(false);
@@ -493,12 +541,12 @@ function renderizarTabelaPessoas(pessoas) {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>
-                <button class="btn-id" onclick="selecionarPessoa(${pessoa.cpf_pessoa})">
+                <button class="btn-id" onclick="selecionarPessoa('${pessoa.cpf_pessoa}')">
                     ${pessoa.cpf_pessoa}
                 </button>
             </td>
             <td>${pessoa.nome_pessoa}</td>
-            <td>${formatarData(pessoa.data_nascimento_pessoa)}</td>                 
+            <td>${formatarData(pessoa.data_nascimento_pessoa)}</td>
             <td>${pessoa.endereco_pessoa}</td>
             <td>${pessoa.senha_pessoa}</td>
             <td>${pessoa.email_pessoa}</td>

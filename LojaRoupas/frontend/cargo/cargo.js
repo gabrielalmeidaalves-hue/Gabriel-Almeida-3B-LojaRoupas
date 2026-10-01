@@ -20,7 +20,10 @@ async function procure() {
         mostrarAviso("O ID do Cargo não pode ser vazio e deve ser um número.");
         return;
     }
-
+        if (id_cargo<0) {
+        mostrarAviso("O ID do Cargo não pode ser negativo.");
+        return;
+    }
     cargo = await procurePorChavePrimaria(id_cargo);
     oQueEstaFazendo = '';
     

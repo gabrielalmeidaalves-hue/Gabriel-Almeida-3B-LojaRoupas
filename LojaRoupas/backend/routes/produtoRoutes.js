@@ -4,7 +4,8 @@ const router = express.Router();
 const produtoController = require('../controllers/produtoController');
 
 // Configura o Multer para armazenar em memória temporária para o Sharp processar
-const upload = multer({ storage: multer.memoryStorage() });
+// (limite de 5 MB por imagem; arquivo que não é imagem o Sharp recusa no controller)
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 // Rotas do CRUD de Produtos
 router.get('/listar', produtoController.listarProdutos);

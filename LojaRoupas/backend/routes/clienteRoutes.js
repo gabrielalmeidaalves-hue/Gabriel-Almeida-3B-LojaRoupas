@@ -4,7 +4,6 @@ const clienteController = require('./../controllers/clienteController');
 
 // CRUD de Clientes
 
-router.get('/abrirCrudCliente', clienteController.abrirCrudCliente);
 router.get('/', clienteController.listarClientes);
 router.post('/', clienteController.criarCliente);
 router.get('/:id', clienteController.obterCliente);

@@ -16,6 +16,11 @@ async function procurePorChavePrimaria(chave) {
 
 async function procure() {
     const id_categoria_roupa = document.getElementById("inputId_categoria_roupa").value.trim().toUpperCase();
+
+    if (!/^[A-Z]+$/.test(id_categoria_roupa)) {
+    mostrarAviso("A sigla deve conter apenas letras.");
+    return;
+}
     if (!id_categoria_roupa || id_categoria_roupa.length > 4) {
         mostrarAviso("A sigla deve conter de 1 a 4 caracteres (ex: FEM, MASC).");
         return;

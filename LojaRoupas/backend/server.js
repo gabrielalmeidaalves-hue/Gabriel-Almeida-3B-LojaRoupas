@@ -1,7 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-require('dotenv').config();
+// Carrega o .env da pasta backend (antes carregava o da pasta onde o node foi iniciado,
+// e a PORT só funcionava por acaso porque o database.js já tinha carregado o .env certo)
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 // Importa a função de consulta do banco
 const { query } = require('./database');
@@ -24,19 +26,29 @@ app.use('/produto', produtoRoutes);
 app.use('/categoria_roupa', categoriaRoupaRoutes);
 
 
-//clienteRoutes tem que vir antes de pessoaRoutes
+// Cliente e funcionário são cadastrados pela tela de Pessoa
 const clienteRoutes = require('./routes/clienteRoutes');
 app.use('/cliente', clienteRoutes);
 
-//funcionarioRoutes tem que vir antes de pessoaRoutes
 const funcionarioRoutes = require('./routes/funcionarioRoutes');
 app.use('/funcionario', funcionarioRoutes);
 
 const pessoaRoutes = require('./routes/pessoaRoutes');
 app.use('/pessoa', pessoaRoutes);
 
-
 app.use('/cargo', cargoRoutes);
+
+// Erros que o Express devolvia como página HTML agora voltam como JSON
+app.use((erro, req, res, next) => {
+    if (erro.type === 'entity.parse.failed') {
+        return res.status(400).json({ sucesso: false, mensagem: 'JSON inválido na requisição.' });
+    }
+    if (erro.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ sucesso: false, mensagem: 'A imagem deve ter no máximo 5 MB.' });
+    }
+    console.error('Erro não tratado:', erro);
+    res.status(500).json({ sucesso: false, mensagem: 'Erro interno do servidor' });
+});
 
 const PORT = process.env.PORT || 3001;
 
